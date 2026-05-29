@@ -235,6 +235,45 @@ a {
   color: #bbf7d0;
 }
 
+.banner-warning {
+  background: rgba(120, 53, 15, 0.4);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: #fde68a;
+}
+
+.banner-info {
+  background: rgba(30, 58, 138, 0.35);
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  color: #bfdbfe;
+}
+
+.match-roster-actions {
+  margin-bottom: 0.75rem;
+}
+
+.goal-row-swap {
+  padding: 0;
+}
+
+.goal-row-swap-btn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.goal-row-swap-btn.swap-selected {
+  outline: 2px solid var(--accent, #38bdf8);
+  background: rgba(56, 189, 248, 0.12);
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;

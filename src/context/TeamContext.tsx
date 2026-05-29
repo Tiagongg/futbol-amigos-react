@@ -30,7 +30,9 @@ import {
   canManageMatch,
   emptyPersistedData,
   MATCH_FORMAT_LABEL,
+  matchHasAnyGoals,
   squadSize,
+  swapMatchRoster,
 } from '../types/models';
 import { useAuth } from './AuthContext';
 
@@ -67,6 +69,7 @@ interface TeamContextValue {
   getSavedMatch: (matchId: string) => SavedMatch | undefined;
   canManageMatchById: (matchId: string) => boolean;
   updateMatchPlayerGoals: (matchId: string, playerId: string, goals: number) => void;
+  swapMatchRosterPlayers: (matchId: string, playerIdA: string, playerIdB: string) => void;
   finalizeMatch: (matchId: string) => void;
   deleteSavedMatch: (matchId: string) => void;
   clearAllSavedMatches: () => void;
@@ -381,6 +384,34 @@ export function TeamProvider({ children }: { children: ReactNode }) {
                     ...m,
                     goalsByPlayerId: { ...m.goalsByPlayerId, [playerId]: goals },
                   },
+            ),
+          },
+          selection: selectedPlayerIds,
+        }));
+      },
+      swapMatchRosterPlayers: (matchId, playerIdA, playerIdB) => {
+        const match = data.savedMatches.find((m) => m.id === matchId);
+        if (!match || !canManageMatch(match, currentMatchUser.userId ?? '')) {
+          setErrorMessage('Solo quien creó el partido puede editarlo o borrarlo');
+          return;
+        }
+        if (match.isFinalized) {
+          setErrorMessage('Este partido ya está finalizado y no se puede modificar');
+          return;
+        }
+        if (matchHasAnyGoals(match)) {
+          setErrorMessage(
+            'No podés modificar los equipos: ya hay goles cargados en este partido',
+          );
+          return;
+        }
+        const roster = swapMatchRoster(match.roster, playerIdA, playerIdB);
+        if (!roster) return;
+        applyData((prev) => ({
+          data: {
+            ...prev,
+            savedMatches: prev.savedMatches.map((m) =>
+              m.id !== matchId ? m : { ...m, roster },
             ),
           },
           selection: selectedPlayerIds,

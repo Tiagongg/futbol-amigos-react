@@ -149,6 +149,27 @@ export function goalsFor(match: SavedMatch, playerId: string): number {
   return match.goalsByPlayerId[playerId] ?? 0;
 }
 
+export function matchHasAnyGoals(match: SavedMatch): boolean {
+  return Object.values(match.goalsByPlayerId).some((g) => (g ?? 0) > 0);
+}
+
+/** Intercambia dos jugadores de equipo (Oscura ↔ Clara) en el roster del partido. */
+export function swapMatchRoster(
+  roster: MatchPlayerEntry[],
+  playerIdA: string,
+  playerIdB: string,
+): MatchPlayerEntry[] | null {
+  if (playerIdA === playerIdB) return null;
+  const a = roster.find((e) => e.playerId === playerIdA);
+  const b = roster.find((e) => e.playerId === playerIdB);
+  if (!a || !b || a.team === b.team) return null;
+  return roster.map((e) => {
+    if (e.playerId === playerIdA) return { ...e, team: b.team };
+    if (e.playerId === playerIdB) return { ...e, team: a.team };
+    return e;
+  });
+}
+
 export function teamOscura(match: SavedMatch): MatchPlayerEntry[] {
   return match.roster.filter((e) => e.team === 'OSCURA');
 }
