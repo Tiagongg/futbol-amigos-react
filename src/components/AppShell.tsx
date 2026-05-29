@@ -1,7 +1,8 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { SignOutButton } from './SignOutButton';
 import { useTeam } from '../context/TeamContext';
+import { useAppBack } from '../lib/useAppBack';
 
 interface AppShellProps {
   title: string;
@@ -24,7 +25,7 @@ export function AppShell({
   showTournamentsLink = false,
   showSignOut = false,
 }: AppShellProps) {
-  const navigate = useNavigate();
+  const goBack = useAppBack(backTo ?? '/');
   const team = useTeam();
 
   return (
@@ -32,7 +33,7 @@ export function AppShell({
       <header className="top-bar">
         <div className="top-bar-left">
           {backTo ? (
-            <button type="button" className="icon-btn" onClick={() => navigate(backTo)}>
+            <button type="button" className="icon-btn" onClick={goBack} aria-label="Volver">
               ←
             </button>
           ) : null}

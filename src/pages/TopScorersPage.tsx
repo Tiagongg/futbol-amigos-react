@@ -25,7 +25,9 @@ export function TopScorersPage() {
           Todavía no hay goles en partidos finalizados de este formato.
         </p>
       ) : (
-        <ol className="scorer-list">
+        <>
+          <p className="hint small scorers-tap-hint">Tocá un jugador para ver su historial.</p>
+          <ol className="scorer-list">
           {standings.map((s, i) => (
             <li key={s.playerId}>
               <span className="rank">{i + 1}</span>
@@ -34,13 +36,15 @@ export function TopScorersPage() {
                 <div className="scorer-info">
                   <strong className="scorer-name">{s.name}</strong>
                   <span className="meta scorer-stats">
-                    {s.totalGoals} goles · {s.matchesPlayed} partidos
+                    {s.totalGoals} goles · {s.matchesWon}{' '}
+                    {s.matchesWon === 1 ? 'victoria' : 'victorias'}
                   </span>
                 </div>
               </Link>
             </li>
           ))}
-        </ol>
+          </ol>
+        </>
       )}
     </AppShell>
   );

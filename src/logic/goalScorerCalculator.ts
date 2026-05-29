@@ -4,12 +4,34 @@ import type {
   PlayerGoalHistoryEntry,
   SavedMatch,
 } from '../types/models';
-import { goalsFor } from '../types/models';
+import {
+  goalsFor,
+  matchWinnerSide,
+  playerMatchOutcome,
+  totalGoalsClara,
+  totalGoalsOscura,
+} from '../types/models';
+
+function winsByPlayer(matches: SavedMatch[], format: MatchFormat): Map<string, number> {
+  const wins = new Map<string, number>();
+  for (const match of matches.filter(
+    (m) => m.isFinalized && m.matchFormat === format,
+  )) {
+    const winner = matchWinnerSide(match);
+    if (!winner) continue;
+    for (const player of match.roster) {
+      if (player.team !== winner) continue;
+      wins.set(player.playerId, (wins.get(player.playerId) ?? 0) + 1);
+    }
+  }
+  return wins;
+}
 
 export function standings(
   matches: SavedMatch[],
   format: MatchFormat,
 ): GoalScorerStanding[] {
+  const wins = winsByPlayer(matches, format);
   const accumulator = new Map<
     string,
     {
@@ -49,6 +71,7 @@ export function standings(
       imageUri: e.imageUri,
       totalGoals: e.totalGoals,
       matchesPlayed: e.matchesPlayed,
+      matchesWon: wins.get(e.playerId) ?? 0,
     }))
     .sort(
       (a, b) =>
@@ -64,16 +87,21 @@ export function historyForPlayer(
   return matches
     .filter((m) => m.isFinalized && m.matchFormat === format)
     .map((match) => {
-      const goals = goalsFor(match, playerId);
-      if (goals <= 0) return null;
       const player = match.roster.find((r) => r.playerId === playerId);
       if (!player) return null;
+      const outcome = playerMatchOutcome(match, playerId);
+      if (!outcome) return null;
       return {
         matchId: match.id,
         matchDateMillis: match.finalizedAtMillis ?? match.createdAtMillis,
-        goals,
+        goals: goalsFor(match, playerId),
         matchFormat: match.matchFormat,
         playerName: player.name,
+        skillScore: player.skillScore,
+        team: player.team,
+        outcome,
+        goalsOscura: totalGoalsOscura(match),
+        goalsClara: totalGoalsClara(match),
       };
     })
     .filter((e): e is PlayerGoalHistoryEntry => e !== null)

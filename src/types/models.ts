@@ -101,7 +101,10 @@ export interface GoalScorerStanding {
   imageUri?: string | null;
   totalGoals: number;
   matchesPlayed: number;
+  matchesWon: number;
 }
+
+export type MatchOutcome = 'won' | 'lost' | 'draw';
 
 export interface PlayerGoalHistoryEntry {
   matchId: string;
@@ -109,6 +112,11 @@ export interface PlayerGoalHistoryEntry {
   goals: number;
   matchFormat: MatchFormat;
   playerName: string;
+  skillScore: number;
+  team: TeamSide;
+  outcome: MatchOutcome;
+  goalsOscura: number;
+  goalsClara: number;
 }
 
 export function parsePersistedPayload(raw: unknown): PersistedAppData | null {
@@ -216,6 +224,26 @@ export function totalGoalsOscura(match: SavedMatch): number {
 
 export function totalGoalsClara(match: SavedMatch): number {
   return teamClara(match).reduce((s, e) => s + goalsFor(match, e.playerId), 0);
+}
+
+export function matchWinnerSide(match: SavedMatch): TeamSide | null {
+  if (!match.isFinalized) return null;
+  const oscura = totalGoalsOscura(match);
+  const clara = totalGoalsClara(match);
+  if (oscura > clara) return 'OSCURA';
+  if (clara > oscura) return 'CLARA';
+  return null;
+}
+
+export function playerMatchOutcome(
+  match: SavedMatch,
+  playerId: string,
+): MatchOutcome | null {
+  const entry = match.roster.find((r) => r.playerId === playerId);
+  if (!entry || !match.isFinalized) return null;
+  const winner = matchWinnerSide(match);
+  if (!winner) return 'draw';
+  return entry.team === winner ? 'won' : 'lost';
 }
 
 export function canManageMatch(match: SavedMatch, userId: string): boolean {
