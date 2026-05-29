@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MessageBanner } from '../components/AuthLayout';
 import { SignOutButton } from '../components/SignOutButton';
+import { TournamentCard } from '../components/TournamentCard';
 
 export function TournamentsPage() {
   const {
@@ -15,6 +16,8 @@ export function TournamentsPage() {
     createTournament,
     joinTournament,
     switchTournament,
+    leaveTournament,
+    removeMemberByEmail,
     session,
     activeTournamentId,
   } = useAuth();
@@ -97,40 +100,19 @@ export function TournamentsPage() {
         ) : (
           <ul className="tournament-list">
             {tournaments.map((t) => (
-              <li
+              <TournamentCard
                 key={t.id}
-                className={`tournament-card ${t.isActive ? 'tournament-card-active' : ''}`}
-              >
-                <div className="tournament-card-body">
-                  <div className="tournament-card-main">
-                    <strong className="tournament-name">{t.name}</strong>
-                    {t.isActive ? (
-                      <span className="badge badge-active">Activo</span>
-                    ) : null}
-                  </div>
-                  <p className="meta tournament-code">
-                    Código de invitación:{' '}
-                    <code>{t.inviteCode || '—'}</code>
-                  </p>
-                </div>
-                <div className="tournament-card-action">
-                  {!t.isActive || session === 'pick_tournament' ? (
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm"
-                      disabled={isBusy}
-                      onClick={() => {
-                        clearMessages();
-                        void switchTournament(t.id);
-                      }}
-                    >
-                      Usar este torneo
-                    </button>
-                  ) : (
-                    <span className="badge badge-in-use">En uso</span>
-                  )}
-                </div>
-              </li>
+                tournament={t}
+                session={session}
+                isBusy={isBusy}
+                onClearMessages={clearMessages}
+                onSwitch={() => {
+                  clearMessages();
+                  void switchTournament(t.id);
+                }}
+                onLeave={() => leaveTournament(t.id)}
+                onExpel={(email) => removeMemberByEmail(t.id, email)}
+              />
             ))}
           </ul>
         )}

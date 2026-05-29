@@ -15,6 +15,29 @@ import { cloudSyncErrorMessage } from '../lib/cloudSyncErrors';
 import { COLLECTIONS, FIELDS, ROLES } from '../lib/firestoreConstants';
 import type { TournamentInfo, UserProfile } from '../types/models';
 
+function memberEmailForJoin(): string {
+  return (auth.currentUser?.email ?? '').trim().toLowerCase();
+}
+
+async function syncUserTournamentMemberships(): Promise<void> {
+  const uid = requireUid();
+  const profile = await loadUserProfile();
+  const validIds: string[] = [];
+  for (const id of profile.tournamentIds) {
+    const memberSnap = await getDoc(memberRef(id, uid));
+    if (memberSnap.exists()) validIds.push(id);
+  }
+  if (validIds.length === profile.tournamentIds.length) return;
+  const updates: Record<string, unknown> = { [FIELDS.tournamentIds]: validIds };
+  if (
+    profile.activeTournamentId &&
+    !validIds.includes(profile.activeTournamentId)
+  ) {
+    updates[FIELDS.activeTournamentId] = validIds[0] ?? null;
+  }
+  await setDoc(userRef(uid), updates, { merge: true });
+}
+
 function requireUid(): string {
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error('Tenés que iniciar sesión');
@@ -83,19 +106,27 @@ export async function updateDisplayName(name: string) {
 }
 
 export async function listMyTournaments(): Promise<TournamentInfo[]> {
+  const uid = requireUid();
+  await syncUserTournamentMemberships();
   const profile = await loadUserProfile();
   const activeId = profile.activeTournamentId;
   const tournaments: TournamentInfo[] = [];
 
   for (const id of profile.tournamentIds) {
+    const memberSnap = await getDoc(memberRef(id, uid));
+    if (!memberSnap.exists()) continue;
+
     const snap = await getDoc(tournamentRef(id));
     if (!snap.exists()) continue;
     const data = snap.data();
+    const createdBy = (data[FIELDS.createdBy] as string) || '';
     tournaments.push({
       id,
       name: (data[FIELDS.name] as string) || id,
       inviteCode: (data[FIELDS.inviteCode] as string) || '',
       isActive: id === activeId,
+      createdBy,
+      isCreator: createdBy === uid,
     });
   }
 
@@ -143,6 +174,7 @@ export async function createTournament(name: string): Promise<TournamentInfo> {
   batch.set(memberRef(tournamentId, uid), {
     [FIELDS.role]: ROLES.admin,
     [FIELDS.joinedAt]: Date.now(),
+    [FIELDS.email]: memberEmailForJoin(),
   });
   batch.set(inviteCodeRef(inviteCode), {
     [FIELDS.tournamentId]: tournamentId,
@@ -187,7 +219,11 @@ export async function joinByInviteCode(rawCode: string): Promise<TournamentInfo>
 
   await setDoc(
     memberRef(tournamentId, uid),
-    { [FIELDS.role]: ROLES.member, [FIELDS.joinedAt]: Date.now() },
+    {
+      [FIELDS.role]: ROLES.member,
+      [FIELDS.joinedAt]: Date.now(),
+      [FIELDS.email]: memberEmailForJoin(),
+    },
     { merge: true },
   );
   await addTournamentToUser(uid, tournamentId, true);

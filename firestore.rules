@@ -1,0 +1,50 @@
+rules_version = '2';
+
+// Amiguis — cuenta obligatoria. Lectura de torneos: cualquier usuario logueado
+// (para unirse con código). Escritura de datos: solo miembros del torneo.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(tournamentId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/tournaments/$(tournamentId)/members/$(request.auth.uid));
+    }
+
+    function isCreator(tournamentId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/tournaments/$(tournamentId))
+        && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.createdBy == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /inviteCodes/{code} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if false;
+    }
+
+    match /tournaments/{tournamentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isMember(tournamentId) || isCreator(tournamentId);
+      allow delete: if false;
+
+      match /members/{memberId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.auth.uid == memberId;
+        allow update: if isSignedIn() && request.auth.uid == memberId;
+        allow delete: if isSignedIn()
+          && (request.auth.uid == memberId || isCreator(tournamentId));
+      }
+    }
+  }
+}

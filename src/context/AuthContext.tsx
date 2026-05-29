@@ -10,6 +10,7 @@ import {
 import { authErrorMessage } from '../lib/authErrors';
 import { cloudSyncErrorMessage } from '../lib/cloudSyncErrors';
 import * as authService from '../services/authService';
+import * as membership from '../services/tournamentMembership';
 import * as tournamentService from '../services/tournamentService';
 import type { TournamentInfo } from '../types/models';
 
@@ -40,6 +41,8 @@ interface AuthContextValue {
   createTournament: (name: string) => Promise<void>;
   joinTournament: (code: string) => Promise<void>;
   switchTournament: (tournamentId: string) => Promise<void>;
+  leaveTournament: (tournamentId: string) => Promise<void>;
+  removeMemberByEmail: (tournamentId: string, email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -247,6 +250,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const leaveTournament = async (tournamentId: string) => {
+    setIsBusy(true);
+    clearMessages();
+    try {
+      await tournamentService.safeTournamentAction(() =>
+        membership.leaveTournament(tournamentId),
+      );
+      setSuccessMessage('Saliste del torneo');
+      await refreshSession();
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : cloudSyncErrorMessage(e));
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const removeMemberByEmail = async (tournamentId: string, email: string) => {
+    setIsBusy(true);
+    clearMessages();
+    try {
+      await tournamentService.safeTournamentAction(() =>
+        membership.removeMemberByEmail(tournamentId, email),
+      );
+      setSuccessMessage('Integrante expulsado del torneo');
+      await refreshSession();
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : cloudSyncErrorMessage(e));
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
@@ -268,6 +303,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createTournament,
       joinTournament,
       switchTournament,
+      leaveTournament,
+      removeMemberByEmail,
     }),
     [
       session,

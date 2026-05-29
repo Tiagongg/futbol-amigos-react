@@ -73,6 +73,15 @@ export interface TournamentInfo {
   name: string;
   inviteCode: string;
   isActive: boolean;
+  isCreator?: boolean;
+  createdBy?: string;
+}
+
+export interface TournamentMember {
+  uid: string;
+  email: string;
+  role: string;
+  joinedAt: number;
 }
 
 export interface BalancedTeams {
