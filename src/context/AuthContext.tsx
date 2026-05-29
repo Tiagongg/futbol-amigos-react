@@ -118,6 +118,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDisplayName('');
         setActiveTournamentId(null);
         setTournaments([]);
+        setErrorMessage(null);
+        setSuccessMessage(null);
         return;
       }
       void handleAuthenticatedUser();
@@ -138,6 +140,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, name: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setErrorMessage('Ingresá tu nombre');
+      return;
+    }
     setIsBusy(true);
     clearMessages();
     try {
@@ -145,11 +152,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const mail = authService.currentUser()?.email ?? email;
       setSession('email_verification_pending');
       setUserEmail(mail);
+      setDisplayName(trimmedName);
       setSuccessMessage(`Te enviamos un correo de verificación a ${mail}`);
-      if (name.trim()) {
-        await tournamentService.loadUserProfile();
-        await tournamentService.updateDisplayName(name);
-      }
+      await tournamentService.loadUserProfile();
+      await tournamentService.updateDisplayName(trimmedName);
     } catch (e) {
       setErrorMessage(authErrorMessage(e));
     } finally {
@@ -205,6 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = () => {
+    clearMessages();
     authService.signOutUser();
   };
 

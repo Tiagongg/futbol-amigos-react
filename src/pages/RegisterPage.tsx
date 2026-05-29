@@ -12,7 +12,7 @@ export function RegisterPage() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     clearMessages();
-    void signUp(email, password, displayName);
+    void signUp(email, password, displayName.trim());
   };
 
   return (
@@ -20,10 +20,11 @@ export function RegisterPage() {
       <MessageBanner error={errorMessage} />
       <form className="form" onSubmit={onSubmit}>
         <label>
-          Nombre (opcional)
+          Nombre
           <input
             type="text"
             autoComplete="name"
+            required
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
           />
@@ -49,6 +50,10 @@ export function RegisterPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
+        <p className="hint small register-spam-hint">
+          Al registrarte te enviamos un correo para verificar la cuenta. Si no lo ves en unos
+          minutos, revisá la carpeta de <strong>spam</strong> o correo no deseado.
+        </p>
         <button type="submit" className="btn btn-primary" disabled={isBusy}>
           {isBusy ? 'Registrando…' : 'Registrarme'}
         </button>

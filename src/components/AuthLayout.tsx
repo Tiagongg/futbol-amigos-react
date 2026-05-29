@@ -35,7 +35,7 @@ export function MessageBanner({
   error?: string | null;
   success?: string | null;
 }) {
-  if (error) return <p className="banner banner-error">{error}</p>;
-  if (success) return <p className="banner banner-success">{success}</p>;
+  if (error) return <p className="banner banner-error banner-block">{error}</p>;
+  if (success) return <p className="banner banner-success banner-block">{success}</p>;
   return null;
 }

@@ -4,7 +4,7 @@ import { AuthLayout, MessageBanner } from '../components/AuthLayout';
 import { useAuth } from '../context/AuthContext';
 
 export function LoginPage() {
-  const { signIn, isBusy, errorMessage, successMessage, clearMessages } = useAuth();
+  const { signIn, isBusy, errorMessage, clearMessages } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -16,7 +16,7 @@ export function LoginPage() {
 
   return (
     <AuthLayout title="Iniciar sesión" subtitle="Misma cuenta que en la app Android.">
-      <MessageBanner error={errorMessage} success={successMessage} />
+      <MessageBanner error={errorMessage} />
       <form className="form" onSubmit={onSubmit}>
         <label>
           Correo

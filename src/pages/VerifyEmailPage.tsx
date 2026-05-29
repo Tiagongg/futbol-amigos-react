@@ -19,8 +19,12 @@ export function VerifyEmailPage() {
       subtitle={userEmail ? `Enviamos un enlace a ${userEmail}` : undefined}
     >
       <MessageBanner error={errorMessage} success={successMessage} />
+      <p className="auth-notice auth-notice-warning">
+        Si no ves el correo en la bandeja de entrada, revisá <strong>spam</strong> o correo
+        no deseado.
+      </p>
       <p className="hint">
-        Abrí el mail de Firebase, tocá el enlace y después pulsá «Ya verifiqué».
+        Abrí el mail de verificación, tocá el enlace y después pulsá «Ya verifiqué».
       </p>
       <div className="button-row">
         <button
@@ -46,9 +50,9 @@ export function VerifyEmailPage() {
           Reenviar correo
         </button>
       </div>
-      <p className="form-footer">
-        <SignOutButton variant="link">Cerrar sesión</SignOutButton>
-      </p>
+      <div className="auth-footer-actions">
+        <SignOutButton className="btn btn-secondary">Cerrar sesión</SignOutButton>
+      </div>
     </AuthLayout>
   );
 }
