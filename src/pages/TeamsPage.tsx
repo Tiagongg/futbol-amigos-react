@@ -148,10 +148,7 @@ export function TeamsPage() {
                   const id = team.saveCurrentTeamsAsMatch();
                   setConfirmSave(false);
                   if (id) {
-                    navigate(`/matches/${id}`, {
-                      replace: true,
-                      state: { from: '/teams' },
-                    });
+                    navigate(`/matches/${id}`, { replace: true });
                   }
                 }}
               >

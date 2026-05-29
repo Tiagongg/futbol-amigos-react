@@ -1,4 +1,4 @@
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { AppShell } from '../components/AppShell';
 import { PlayerAvatar } from '../components/PlayerAvatar';
 import { useTeam } from '../context/TeamContext';
@@ -17,21 +17,11 @@ function outcomeLabel(outcome: MatchOutcome): string {
   return 'Empate';
 }
 
-function HistoryRow({
-  entry,
-  returnTo,
-}: {
-  entry: PlayerGoalHistoryEntry;
-  returnTo: string;
-}) {
+function HistoryRow({ entry }: { entry: PlayerGoalHistoryEntry }) {
   const teamName = entry.team === 'OSCURA' ? TEAM_NAMES.OSCURA : TEAM_NAMES.CLARA;
   return (
     <li>
-      <Link
-        to={`/matches/${entry.matchId}`}
-        state={{ from: returnTo }}
-        className="history-match-link"
-      >
+      <Link to={`/matches/${entry.matchId}`} className="history-match-link">
         <div className="history-match-main">
           <strong>{formatMatchDate(entry.matchDateMillis)}</strong>
           <span className="meta">
@@ -52,7 +42,6 @@ function HistoryRow({
 
 export function ScorerHistoryPage() {
   const { format: formatParam, playerId } = useParams();
-  const location = useLocation();
   const team = useTeam();
   const format = formatParam as MatchFormat;
   if (!playerId || !format) return null;
@@ -89,11 +78,7 @@ export function ScorerHistoryPage() {
           <p className="hint small history-hint">Tocá un partido para ver goles y niveles.</p>
           <ul className="history-list">
             {history.map((entry) => (
-              <HistoryRow
-                key={entry.matchId}
-                entry={entry}
-                returnTo={location.pathname}
-              />
+              <HistoryRow key={entry.matchId} entry={entry} />
             ))}
           </ul>
         </>

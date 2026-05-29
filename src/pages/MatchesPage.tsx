@@ -45,11 +45,7 @@ export function MatchesPage() {
         <ul className="match-list">
           {team.savedMatches.map((match) => (
             <li key={match.id}>
-              <Link
-                to={`/matches/${match.id}`}
-                state={{ from: '/matches' }}
-                className="match-card"
-              >
+              <Link to={`/matches/${match.id}`} className="match-card">
                 <div className="match-card-info">
                   <strong className="match-card-title">
                     {MATCH_FORMAT_LABEL[match.matchFormat]}
