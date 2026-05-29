@@ -4,10 +4,14 @@ import { AppShell, ToastMessages } from '../components/AppShell';
 import { PlayerAvatar } from '../components/PlayerAvatar';
 import { useTeam } from '../context/TeamContext';
 import { formatMatchDate } from '../lib/dateFormat';
+import type { MatchPlayerEntry, SavedMatch } from '../types/models';
 import {
   goalsFor,
   matchHasAnyGoals,
   matchUserLabel,
+  replaceMatchRosterPlayer,
+  rosterPlayerIds,
+  swapMatchRoster,
   TEAM_NAMES,
   teamClara,
   teamOscura,
@@ -15,11 +19,23 @@ import {
   totalGoalsOscura,
 } from '../types/models';
 
+function cloneRosterDraft(match: SavedMatch): {
+  roster: MatchPlayerEntry[];
+  goalsByPlayerId: Record<string, number>;
+} {
+  return {
+    roster: match.roster.map((e) => ({ ...e })),
+    goalsByPlayerId: { ...match.goalsByPlayerId },
+  };
+}
+
 export function MatchDetailPage() {
   const { matchId } = useParams();
   const team = useTeam();
   const [confirmFinalize, setConfirmFinalize] = useState(false);
   const [editRoster, setEditRoster] = useState(false);
+  const [draftRoster, setDraftRoster] = useState<MatchPlayerEntry[] | null>(null);
+  const [draftGoals, setDraftGoals] = useState<Record<string, number> | null>(null);
   const [swapId, setSwapId] = useState<string | null>(null);
   const [pendingGoalPlayerId, setPendingGoalPlayerId] = useState<string | null>(null);
 
@@ -37,8 +53,43 @@ export function MatchDetailPage() {
   const hasGoals = matchHasAnyGoals(match);
   const canEditRoster = canEdit && !match.isFinalized && !hasGoals;
 
+  const displayMatch: SavedMatch =
+    editRoster && draftRoster
+      ? { ...match, roster: draftRoster, goalsByPlayerId: draftGoals ?? match.goalsByPlayerId }
+      : match;
+
+  const inMatchIds = rosterPlayerIds(displayMatch);
+  const benchPlayers = team.players
+    .filter((p) => !inMatchIds.has(p.id))
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+
+  const selectedInMatch = swapId
+    ? displayMatch.roster.find((e) => e.playerId === swapId)
+    : undefined;
+
+  const startEditRoster = () => {
+    const draft = cloneRosterDraft(match);
+    setDraftRoster(draft.roster);
+    setDraftGoals(draft.goalsByPlayerId);
+    setEditRoster(true);
+    setSwapId(null);
+  };
+
+  const discardEditRoster = () => {
+    setEditRoster(false);
+    setDraftRoster(null);
+    setDraftGoals(null);
+    setSwapId(null);
+  };
+
+  const confirmEditRoster = () => {
+    if (!draftRoster || !draftGoals) return;
+    team.commitMatchRoster(match.id, draftRoster, draftGoals);
+    discardEditRoster();
+  };
+
   const onPlayerTapForSwap = (playerId: string, inOscura: boolean) => {
-    if (!canEditRoster) return;
+    if (!canEditRoster || !draftRoster) return;
     if (!swapId) {
       setSwapId(playerId);
       return;
@@ -47,14 +98,32 @@ export function MatchDetailPage() {
       setSwapId(null);
       return;
     }
-    const oscuraIds = teamOscura(match).map((e) => e.playerId);
+    const oscuraIds = teamOscura(displayMatch).map((e) => e.playerId);
     const selectedInOscura = oscuraIds.includes(swapId);
     if (selectedInOscura === inOscura) {
       setSwapId(playerId);
     } else {
-      team.swapMatchRosterPlayers(match.id, swapId, playerId);
+      const roster = swapMatchRoster(draftRoster, swapId, playerId);
+      if (roster) setDraftRoster(roster);
       setSwapId(null);
     }
+  };
+
+  const onReplaceFromBench = (incomingPlayerId: string) => {
+    if (!swapId || !draftRoster || !draftGoals) return;
+    const incoming = team.players.find((p) => p.id === incomingPlayerId);
+    if (!incoming) return;
+    const updated = replaceMatchRosterPlayer(
+      draftRoster,
+      draftGoals,
+      swapId,
+      incoming,
+    );
+    if (updated) {
+      setDraftRoster(updated.roster);
+      setDraftGoals(updated.goalsByPlayerId);
+    }
+    setSwapId(null);
   };
 
   const tryIncreaseGoal = (playerId: string, currentGoals: number) => {
@@ -69,7 +138,7 @@ export function MatchDetailPage() {
     if (!pendingGoalPlayerId) return;
     team.updateMatchPlayerGoals(match.id, pendingGoalPlayerId, 1);
     setPendingGoalPlayerId(null);
-    if (editRoster) setEditRoster(false);
+    discardEditRoster();
   };
 
   const renderTeam = (
@@ -81,9 +150,9 @@ export function MatchDetailPage() {
       <h2>{title}</h2>
       <ul>
         {entries.map((entry) => {
-          const goals = goalsFor(match, entry.playerId);
+          const goals = goalsFor(displayMatch, entry.playerId);
           const inOscura = variant === 'oscura';
-          const swapMode = editRoster && canEditRoster;
+          const swapMode = editRoster && canEditRoster && draftRoster;
 
           return (
             <li
@@ -176,10 +245,17 @@ export function MatchDetailPage() {
         </p>
       ) : null}
 
-      {canEdit && !match.isFinalized && !hasGoals ? (
+      {canEdit && !match.isFinalized && !hasGoals && !editRoster ? (
         <p className="banner banner-warning">
-          Podés modificar los equipos antes de cargar goles. Si sumás goles, la plantilla
-          del partido queda fija.
+          Podés cambiar equipos o traer jugadores de la plantilla del torneo (bajas de
+          último momento) antes de cargar goles. Si sumás goles, la plantilla queda fija.
+        </p>
+      ) : null}
+
+      {editRoster && canEditRoster ? (
+        <p className="banner banner-warning">
+          Estás editando en borrador: los cambios <strong>no se guardan</strong> hasta que
+          toques «Guardar equipos». Descartar vuelve al estado anterior.
         </p>
       ) : null}
 
@@ -191,39 +267,69 @@ export function MatchDetailPage() {
 
       {canEditRoster && !editRoster ? (
         <div className="button-row match-roster-actions">
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setEditRoster(true);
-              setSwapId(null);
-            }}
-          >
+          <button type="button" className="btn btn-secondary btn-sm" onClick={startEditRoster}>
             Modificar equipos
           </button>
         </div>
       ) : null}
 
       {editRoster && canEditRoster ? (
-        <p className="hint swap-hint">Tocá un jugador de cada equipo para intercambiarlos.</p>
+        <p className="hint swap-hint">
+          Tocá un jugador del partido y después otro de otro equipo para intercambiarlos, o
+          elegí un suplente de la plantilla para reemplazarlo (baja de último momento).
+        </p>
       ) : null}
 
       <div className="match-teams-grid">
-        {renderTeam(TEAM_NAMES.OSCURA, teamOscura(match), 'oscura')}
-        {renderTeam(TEAM_NAMES.CLARA, teamClara(match), 'clara')}
+        {renderTeam(TEAM_NAMES.OSCURA, teamOscura(displayMatch), 'oscura')}
+        {renderTeam(TEAM_NAMES.CLARA, teamClara(displayMatch), 'clara')}
       </div>
 
+      {editRoster && canEditRoster && swapId && selectedInMatch ? (
+        <section className="match-bench">
+          <h3>Reemplazar a {selectedInMatch.name}</h3>
+          <p className="hint small">
+            Equipo {selectedInMatch.team === 'OSCURA' ? TEAM_NAMES.OSCURA : TEAM_NAMES.CLARA}.
+            {benchPlayers.length === 0
+              ? ' No hay más jugadores en la plantilla del torneo.'
+              : ' Tocá quién entra en su lugar.'}
+          </p>
+          {benchPlayers.length > 0 ? (
+            <ul className="player-list match-bench-list">
+              {benchPlayers.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    className="team-player bench-player-btn"
+                    onClick={() => onReplaceFromBench(p.id)}
+                  >
+                    <PlayerAvatar name={p.name} imageUri={p.imageUri} size={36} />
+                    <span>{p.name}</span>
+                    <span className="meta">Nivel {p.score}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setSwapId(null)}
+          >
+            Cancelar selección
+          </button>
+        </section>
+      ) : null}
+
       {canEdit && !match.isFinalized && editRoster && canEditRoster ? (
-        <button
-          type="button"
-          className="btn btn-primary full-width"
-          onClick={() => {
-            setEditRoster(false);
-            setSwapId(null);
-          }}
-        >
-          Listo · cargar goles
-        </button>
+        <div className="button-row match-edit-actions">
+          <button type="button" className="btn btn-secondary" onClick={discardEditRoster}>
+            Descartar
+          </button>
+          <button type="button" className="btn btn-primary" onClick={confirmEditRoster}>
+            Guardar equipos
+          </button>
+        </div>
       ) : null}
 
       {canEdit && !match.isFinalized && !editRoster ? (

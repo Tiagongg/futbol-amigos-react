@@ -153,6 +153,38 @@ export function matchHasAnyGoals(match: SavedMatch): boolean {
   return Object.values(match.goalsByPlayerId).some((g) => (g ?? 0) > 0);
 }
 
+export function rosterPlayerIds(match: SavedMatch): Set<string> {
+  return new Set(match.roster.map((e) => e.playerId));
+}
+
+/** Sustituye un jugador del partido por otro de la plantilla (mismo equipo). */
+export function replaceMatchRosterPlayer(
+  roster: MatchPlayerEntry[],
+  goalsByPlayerId: Record<string, number>,
+  outgoingPlayerId: string,
+  incoming: Player,
+): { roster: MatchPlayerEntry[]; goalsByPlayerId: Record<string, number> } | null {
+  const outgoing = roster.find((e) => e.playerId === outgoingPlayerId);
+  if (!outgoing) return null;
+  if (roster.some((e) => e.playerId === incoming.id)) return null;
+
+  const rosterNext = roster.map((e) =>
+    e.playerId === outgoingPlayerId
+      ? {
+          playerId: incoming.id,
+          name: incoming.name,
+          skillScore: incoming.score,
+          imageUri: incoming.imageUri,
+          team: outgoing.team,
+        }
+      : e,
+  );
+  const goalsNext = { ...goalsByPlayerId };
+  delete goalsNext[outgoingPlayerId];
+  goalsNext[incoming.id] = 0;
+  return { roster: rosterNext, goalsByPlayerId: goalsNext };
+}
+
 /** Intercambia dos jugadores de equipo (Oscura ↔ Clara) en el roster del partido. */
 export function swapMatchRoster(
   roster: MatchPlayerEntry[],

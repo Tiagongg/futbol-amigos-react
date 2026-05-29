@@ -31,6 +31,7 @@ import {
   emptyPersistedData,
   MATCH_FORMAT_LABEL,
   matchHasAnyGoals,
+  replaceMatchRosterPlayer as replaceMatchRosterPlayerInMatch,
   squadSize,
   swapMatchRoster,
 } from '../types/models';
@@ -70,6 +71,16 @@ interface TeamContextValue {
   canManageMatchById: (matchId: string) => boolean;
   updateMatchPlayerGoals: (matchId: string, playerId: string, goals: number) => void;
   swapMatchRosterPlayers: (matchId: string, playerIdA: string, playerIdB: string) => void;
+  replaceMatchRosterPlayer: (
+    matchId: string,
+    outgoingPlayerId: string,
+    incomingPlayerId: string,
+  ) => void;
+  commitMatchRoster: (
+    matchId: string,
+    roster: SavedMatch['roster'],
+    goalsByPlayerId: Record<string, number>,
+  ) => void;
   finalizeMatch: (matchId: string) => void;
   deleteSavedMatch: (matchId: string) => void;
   clearAllSavedMatches: () => void;
@@ -416,6 +427,81 @@ export function TeamProvider({ children }: { children: ReactNode }) {
           },
           selection: selectedPlayerIds,
         }));
+      },
+      replaceMatchRosterPlayer: (matchId, outgoingPlayerId, incomingPlayerId) => {
+        const match = data.savedMatches.find((m) => m.id === matchId);
+        if (!match || !canManageMatch(match, currentMatchUser.userId ?? '')) {
+          setErrorMessage('Solo quien creó el partido puede editarlo o borrarlo');
+          return;
+        }
+        if (match.isFinalized) {
+          setErrorMessage('Este partido ya está finalizado y no se puede modificar');
+          return;
+        }
+        if (matchHasAnyGoals(match)) {
+          setErrorMessage(
+            'No podés modificar los equipos: ya hay goles cargados en este partido',
+          );
+          return;
+        }
+        const incoming = data.players.find((p) => p.id === incomingPlayerId);
+        if (!incoming) {
+          setErrorMessage('Ese jugador no está en la plantilla del torneo');
+          return;
+        }
+        const updated = replaceMatchRosterPlayerInMatch(
+          match.roster,
+          match.goalsByPlayerId,
+          outgoingPlayerId,
+          incoming,
+        );
+        if (!updated) {
+          setErrorMessage('No se pudo hacer el cambio (¿ya está en el partido?)');
+          return;
+        }
+        applyData((prev) => ({
+          data: {
+            ...prev,
+            savedMatches: prev.savedMatches.map((m) =>
+              m.id !== matchId
+                ? m
+                : {
+                    ...m,
+                    roster: updated.roster,
+                    goalsByPlayerId: updated.goalsByPlayerId,
+                  },
+            ),
+          },
+          selection: selectedPlayerIds,
+        }));
+        setSuccessMessage(`${incoming.name} entra al partido`);
+      },
+      commitMatchRoster: (matchId, roster, goalsByPlayerId) => {
+        const match = data.savedMatches.find((m) => m.id === matchId);
+        if (!match || !canManageMatch(match, currentMatchUser.userId ?? '')) {
+          setErrorMessage('Solo quien creó el partido puede editarlo o borrarlo');
+          return;
+        }
+        if (match.isFinalized) {
+          setErrorMessage('Este partido ya está finalizado y no se puede modificar');
+          return;
+        }
+        if (matchHasAnyGoals(match)) {
+          setErrorMessage(
+            'No podés modificar los equipos: ya hay goles cargados en este partido',
+          );
+          return;
+        }
+        applyData((prev) => ({
+          data: {
+            ...prev,
+            savedMatches: prev.savedMatches.map((m) =>
+              m.id !== matchId ? m : { ...m, roster, goalsByPlayerId },
+            ),
+          },
+          selection: selectedPlayerIds,
+        }));
+        setSuccessMessage('Equipos del partido guardados');
       },
       finalizeMatch: (matchId) => {
         const match = data.savedMatches.find((m) => m.id === matchId);
