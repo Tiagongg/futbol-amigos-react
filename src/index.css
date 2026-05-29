@@ -859,6 +859,21 @@ a {
 
 .goal-row-info {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+
+.goal-row-info strong {
+  display: block;
+  line-height: 1.25;
+}
+
+.goal-row-info .meta {
+  display: block;
+  line-height: 1.2;
 }
 
 .goal-controls {
