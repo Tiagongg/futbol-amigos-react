@@ -11,6 +11,7 @@ import {
 import { auth, db } from '../firebase/config';
 import { COLLECTIONS, FIELDS, ROLES } from '../lib/firestoreConstants';
 import type { TournamentMember } from '../types/models';
+import { getLegacyOwnerEmail } from '../lib/env';
 import { LEGACY } from '../lib/firestoreConstants';
 import { joinByInviteCode, loadUserProfile } from './tournamentService';
 
@@ -119,7 +120,8 @@ export async function isTournamentCreator(tournamentId: string): Promise<boolean
  */
 export async function ensureLegacyTournamentOwner(): Promise<void> {
   const email = currentUserEmail();
-  if (email !== normalizeEmail(LEGACY.ownerEmail)) return;
+  const ownerEmail = getLegacyOwnerEmail();
+  if (!ownerEmail || email !== normalizeEmail(ownerEmail)) return;
 
   const uid = requireUid();
   const tournamentId = LEGACY.tournamentId;

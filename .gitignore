@@ -1,7 +1,17 @@
 node_modules/
 dist/
-.env
-.env.local
-.env.*.local
 .DS_Store
 .vscode/
+
+# Secretos y credenciales (nunca commitear)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*serviceAccount*.json
+*service-account*.json
+google-services.json
+GoogleService-Info.plist
+firebase-adminsdk*.json
