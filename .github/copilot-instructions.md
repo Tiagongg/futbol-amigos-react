@@ -1,0 +1,4 @@
+- [ ] El proyecto React web ha sido generado manualmente con Vite + TypeScript.
+- [ ] Verificar instalación de Node.js y npm en el entorno local.
+- [ ] Usar `npm install` para instalar dependencias antes de ejecutar.
+- [ ] Ejecutar `npm run dev` para iniciar la app en desarrollo.
