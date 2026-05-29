@@ -27,7 +27,7 @@ Abrí `http://localhost:5173`
 - Partidos: goles por jugador, finalizar, eliminar (solo el creador)
 - Tabla de goleadores e historial por jugador
 - Fotos en Firebase Storage
-- Sync en vivo con Firestore (misma estructura que Android)
+- Sync en vivo con Firestore
 
 ## Build producción
 
