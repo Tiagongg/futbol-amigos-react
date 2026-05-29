@@ -80,6 +80,8 @@ export interface TournamentInfo {
 export interface TournamentMember {
   uid: string;
   email: string;
+  /** Correo o nombre visible si aún no hay correo en members/users */
+  displayLabel: string;
   role: string;
   joinedAt: number;
 }

@@ -18,6 +18,7 @@ export function TournamentsPage() {
     switchTournament,
     leaveTournament,
     removeMemberByEmail,
+    deleteTournament,
     session,
     activeTournamentId,
   } = useAuth();
@@ -111,6 +112,7 @@ export function TournamentsPage() {
                   void switchTournament(t.id);
                 }}
                 onLeave={() => leaveTournament(t.id)}
+                onDelete={() => deleteTournament(t.id)}
                 onExpel={(email) => removeMemberByEmail(t.id, email)}
               />
             ))}

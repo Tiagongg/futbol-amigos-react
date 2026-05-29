@@ -689,6 +689,12 @@ a {
   margin-top: 0.5rem;
 }
 
+.badge-legacy {
+  background: rgba(56, 189, 248, 0.2);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
 .badge-creator {
   background: rgba(234, 179, 8, 0.25);
   color: #fde047;

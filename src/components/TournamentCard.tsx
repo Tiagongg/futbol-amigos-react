@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { LEGACY } from '../lib/firestoreConstants';
 import type { TournamentInfo, TournamentMember } from '../types/models';
 import * as membership from '../services/tournamentMembership';
 
@@ -8,6 +9,7 @@ interface TournamentCardProps {
   isBusy: boolean;
   onSwitch: () => void;
   onLeave: () => Promise<void>;
+  onDelete: () => Promise<void>;
   onExpel: (email: string) => Promise<void>;
   onClearMessages: () => void;
 }
@@ -18,6 +20,7 @@ export function TournamentCard({
   isBusy,
   onSwitch,
   onLeave,
+  onDelete,
   onExpel,
   onClearMessages,
 }: TournamentCardProps) {
@@ -26,6 +29,8 @@ export function TournamentCard({
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [expelEmail, setExpelEmail] = useState('');
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const isLegacy = t.id === LEGACY.tournamentId;
 
   useEffect(() => {
     if (!expanded || !t.isCreator) return undefined;
@@ -68,10 +73,17 @@ export function TournamentCard({
             <strong className="tournament-name">{t.name}</strong>
             {t.isActive ? <span className="badge badge-active">Activo</span> : null}
             {t.isCreator ? <span className="badge badge-creator">Creador</span> : null}
+            {isLegacy ? <span className="badge badge-legacy">Principal</span> : null}
           </div>
           <p className="meta tournament-code">
-            Código de invitación: <code>{t.inviteCode || '—'}</code>
+            Código de invitación:{' '}
+            <code>{t.inviteCode || (isLegacy ? LEGACY.inviteCode : '—')}</code>
           </p>
+          {isLegacy ? (
+            <p className="hint small">
+              Torneo compartido de la app Android. Código clásico: {LEGACY.inviteCode}
+            </p>
+          ) : null}
         </div>
         <div className="tournament-card-action">
           {!t.isActive || session === 'pick_tournament' ? (
@@ -105,6 +117,16 @@ export function TournamentCard({
         >
           Salir del torneo
         </button>
+        {t.isCreator && !isLegacy ? (
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm danger-text"
+            disabled={isBusy}
+            onClick={() => setConfirmDelete(true)}
+          >
+            Eliminar torneo
+          </button>
+        ) : null}
       </div>
 
       {expanded ? (
@@ -115,14 +137,17 @@ export function TournamentCard({
               {loadingMembers ? (
                 <p className="hint">Cargando integrantes…</p>
               ) : members.length === 0 ? (
-                <p className="hint">No hay integrantes con correo registrado todavía.</p>
+                <p className="hint">Todavía no hay integrantes en este torneo.</p>
               ) : (
                 <ul className="member-email-list">
                   {members.map((m) => (
                     <li key={m.uid}>
-                      <span>{m.email || '(sin correo en el registro)'}</span>
+                      <span>{m.displayLabel}</span>
+                      {!m.email ? (
+                        <span className="meta"> · sin correo guardado</span>
+                      ) : null}
                       {m.role === 'admin' ? (
-                        <span className="meta"> · admin</span>
+                        <span className="meta"> · creador</span>
                       ) : null}
                     </li>
                   ))}
@@ -141,11 +166,17 @@ export function TournamentCard({
                 </button>
               </form>
               <p className="hint small">
-                Solo podés expulsar por el correo con el que se unieron. Si no aparece,
-                que vuelvan a entrar al torneo con el código.
+                Para expulsar, usá el mismo correo con el que se registraron. Si no
+                aparece arriba, pediles que cierren sesión, vuelvan a entrar y se unan
+                otra vez con el código.
               </p>
             </section>
-          ) : null}
+          ) : (
+            <p className="hint small">
+              Solo el creador del torneo puede ver quiénes están adentro. Podés salir del
+              torneo con el botón de arriba.
+            </p>
+          )}
         </div>
       ) : null}
 
@@ -156,6 +187,13 @@ export function TournamentCard({
             <p>
               ¿Querés salir de «{t.name}»? Dejarás de ver sus jugadores y partidos hasta
               que te unas de nuevo con el código.
+              {t.isCreator && !isLegacy ? (
+                <>
+                  {' '}
+                  El torneo sigue existiendo para los demás. Para borrarlo por completo
+                  usá «Eliminar torneo».
+                </>
+              ) : null}
             </p>
             <div className="button-row">
               <button
@@ -172,6 +210,37 @@ export function TournamentCard({
                 type="button"
                 className="btn btn-secondary"
                 onClick={() => setConfirmLeave(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {confirmDelete ? (
+        <div className="modal-backdrop nested-modal">
+          <div className="modal">
+            <h3>Eliminar torneo</h3>
+            <p>
+              ¿Eliminar «{t.name}» para todos? Se borran jugadores, partidos y el código{' '}
+              <code>{t.inviteCode || '—'}</code>. Esta acción no se puede deshacer.
+            </p>
+            <div className="button-row">
+              <button
+                type="button"
+                className="btn btn-primary danger-text"
+                disabled={isBusy}
+                onClick={() => {
+                  void onDelete().finally(() => setConfirmDelete(false));
+                }}
+              >
+                Sí, eliminar
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setConfirmDelete(false)}
               >
                 Cancelar
               </button>

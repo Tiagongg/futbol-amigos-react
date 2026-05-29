@@ -120,13 +120,15 @@ export async function listMyTournaments(): Promise<TournamentInfo[]> {
     if (!snap.exists()) continue;
     const data = snap.data();
     const createdBy = (data[FIELDS.createdBy] as string) || '';
+    const memberData = memberSnap.data();
+    const role = (memberData[FIELDS.role] as string) || ROLES.member;
     tournaments.push({
       id,
       name: (data[FIELDS.name] as string) || id,
       inviteCode: (data[FIELDS.inviteCode] as string) || '',
       isActive: id === activeId,
       createdBy,
-      isCreator: createdBy === uid,
+      isCreator: createdBy === uid || role === ROLES.admin,
     });
   }
 

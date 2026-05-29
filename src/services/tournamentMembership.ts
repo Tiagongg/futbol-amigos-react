@@ -11,7 +11,8 @@ import {
 import { auth, db } from '../firebase/config';
 import { COLLECTIONS, FIELDS, ROLES } from '../lib/firestoreConstants';
 import type { TournamentMember } from '../types/models';
-import { loadUserProfile } from './tournamentService';
+import { LEGACY } from '../lib/firestoreConstants';
+import { joinByInviteCode, loadUserProfile } from './tournamentService';
 
 function requireUid(): string {
   const uid = auth.currentUser?.uid;
@@ -35,8 +36,62 @@ function membersCollection(tournamentId: string) {
   return collection(db, COLLECTIONS.tournaments, tournamentId, COLLECTIONS.members);
 }
 
+function inviteCodeRef(code: string) {
+  return doc(db, COLLECTIONS.inviteCodes, code);
+}
+
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function currentUserEmail(): string {
+  return normalizeEmail(auth.currentUser?.email ?? '');
+}
+
+/** Guarda el correo en cada torneo donde sos miembro (arregla registros viejos). */
+export async function ensureMyMemberEmails(): Promise<void> {
+  const uid = requireUid();
+  const email = currentUserEmail();
+  if (!email) return;
+
+  const profile = await loadUserProfile();
+  await Promise.all(
+    profile.tournamentIds.map(async (tournamentId) => {
+      const ref = memberRef(tournamentId, uid);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return;
+      const stored = (snap.data()[FIELDS.email] as string) || '';
+      if (normalizeEmail(stored) === email) return;
+      await setDoc(ref, { [FIELDS.email]: email }, { merge: true });
+    }),
+  );
+}
+
+async function resolveMemberEmail(
+  tournamentId: string,
+  memberUid: string,
+  storedEmail: string,
+  creatorCanBackfill: boolean,
+): Promise<string> {
+  if (storedEmail.trim()) return normalizeEmail(storedEmail);
+
+  try {
+    const userSnap = await getDoc(userRef(memberUid));
+    if (!userSnap.exists()) return '';
+    const fromUser = normalizeEmail((userSnap.data()[FIELDS.email] as string) || '');
+    if (!fromUser) return '';
+
+    if (creatorCanBackfill) {
+      await setDoc(
+        memberRef(tournamentId, memberUid),
+        { [FIELDS.email]: fromUser },
+        { merge: true },
+      );
+    }
+    return fromUser;
+  } catch {
+    return '';
+  }
 }
 
 export async function getTournamentCreatedBy(tournamentId: string): Promise<string> {
@@ -45,13 +100,60 @@ export async function getTournamentCreatedBy(tournamentId: string): Promise<stri
   return (snap.data()[FIELDS.createdBy] as string) || '';
 }
 
-export async function isTournamentCreator(tournamentId: string): Promise<boolean> {
+export async function canManageTournament(tournamentId: string): Promise<boolean> {
   const uid = requireUid();
   const createdBy = await getTournamentCreatedBy(tournamentId);
-  return createdBy === uid;
+  if (createdBy === uid) return true;
+  const memberSnap = await getDoc(memberRef(tournamentId, uid));
+  if (!memberSnap.exists()) return false;
+  return (memberSnap.data()[FIELDS.role] as string) === ROLES.admin;
 }
 
-/** Quita del perfil torneos donde ya no hay documento de miembro. */
+/** Alias: creador del doc o rol admin en members. */
+export async function isTournamentCreator(tournamentId: string): Promise<boolean> {
+  return canManageTournament(tournamentId);
+}
+
+/**
+ * Torneo principal `futbol-amigos-2026`: asegura membresía y creadoría para el dueño legacy.
+ */
+export async function ensureLegacyTournamentOwner(): Promise<void> {
+  const email = currentUserEmail();
+  if (email !== normalizeEmail(LEGACY.ownerEmail)) return;
+
+  const uid = requireUid();
+  const tournamentId = LEGACY.tournamentId;
+  let memberSnap = await getDoc(memberRef(tournamentId, uid));
+
+  if (!memberSnap.exists()) {
+    try {
+      await joinByInviteCode(LEGACY.inviteCode);
+      memberSnap = await getDoc(memberRef(tournamentId, uid));
+    } catch {
+      return;
+    }
+  }
+
+  if (!memberSnap.exists()) return;
+
+  const tSnap = await getDoc(tournamentRef(tournamentId));
+  if (!tSnap.exists()) return;
+
+  const createdBy = (tSnap.data()[FIELDS.createdBy] as string) || '';
+  const memberPatch: Record<string, unknown> = {
+    [FIELDS.role]: ROLES.admin,
+    [FIELDS.email]: email,
+  };
+  if (!memberSnap.data()[FIELDS.joinedAt]) {
+    memberPatch[FIELDS.joinedAt] = Date.now();
+  }
+  await setDoc(memberRef(tournamentId, uid), memberPatch, { merge: true });
+
+  if (createdBy !== uid) {
+    await setDoc(tournamentRef(tournamentId), { [FIELDS.createdBy]: uid }, { merge: true });
+  }
+}
+
 export async function syncUserTournamentMemberships(): Promise<void> {
   const uid = requireUid();
   const profile = await loadUserProfile();
@@ -79,25 +181,54 @@ export async function syncUserTournamentMemberships(): Promise<void> {
 export async function listTournamentMembers(
   tournamentId: string,
 ): Promise<TournamentMember[]> {
+  if (!(await canManageTournament(tournamentId))) {
+    throw new Error('Solo el creador del torneo puede ver la lista de integrantes');
+  }
+  const creatorCanBackfill = true;
   const snap = await getDocs(membersCollection(tournamentId));
-  return snap.docs
-    .map((d) => {
+
+  const members = await Promise.all(
+    snap.docs.map(async (d) => {
       const data = d.data();
+      const stored = (data[FIELDS.email] as string) || '';
+      const email = await resolveMemberEmail(
+        tournamentId,
+        d.id,
+        stored,
+        creatorCanBackfill,
+      );
+      let displayLabel = email;
+      if (!displayLabel) {
+        try {
+          const userSnap = await getDoc(userRef(d.id));
+          displayLabel =
+            (userSnap.data()?.[FIELDS.displayName] as string) ||
+            `Usuario ${d.id.slice(0, 8)}`;
+        } catch {
+          displayLabel = `Usuario ${d.id.slice(0, 8)}`;
+        }
+      }
       return {
         uid: d.id,
-        email: (data[FIELDS.email] as string) || '',
+        email,
+        displayLabel,
         role: (data[FIELDS.role] as string) || ROLES.member,
         joinedAt: (data[FIELDS.joinedAt] as number) || 0,
       };
-    })
-    .sort((a, b) => a.email.localeCompare(b.email, 'es'));
+    }),
+  );
+
+  return members.sort((a, b) => {
+    const ea = a.email || a.uid;
+    const eb = b.email || b.uid;
+    return ea.localeCompare(eb, 'es');
+  });
 }
 
 async function removeMemberFromTournament(
   tournamentId: string,
   targetUid: string,
 ): Promise<void> {
-  const uid = requireUid();
   const memberSnap = await getDoc(memberRef(tournamentId, targetUid));
   if (!memberSnap.exists()) {
     throw new Error('Esa persona no está en el torneo');
@@ -125,7 +256,7 @@ async function removeMemberFromTournament(
   try {
     await setDoc(userRef(targetUid), updates, { merge: true });
   } catch {
-    // Si las reglas no permiten actualizar al otro usuario, el miembro ya no accede al torneo.
+    // El miembro ya no puede entrar al torneo aunque su lista tarde en actualizarse.
   }
 }
 
@@ -163,4 +294,46 @@ export async function removeMemberByEmail(
   }
 
   await removeMemberFromTournament(tournamentId, target.uid);
+}
+
+/** Solo el creador: borra el torneo, miembros y código de invitación. */
+export async function deleteTournament(tournamentId: string): Promise<void> {
+  const uid = requireUid();
+  if (tournamentId === LEGACY.tournamentId) {
+    throw new Error('El torneo principal (futbol-amigos-2026) no se puede eliminar desde la app');
+  }
+  if (!(await canManageTournament(tournamentId))) {
+    throw new Error('Solo el creador puede eliminar el torneo');
+  }
+
+  const tSnap = await getDoc(tournamentRef(tournamentId));
+  if (!tSnap.exists()) throw new Error('El torneo ya no existe');
+
+  const inviteCode = (tSnap.data()[FIELDS.inviteCode] as string) || '';
+  const membersSnap = await getDocs(membersCollection(tournamentId));
+
+  const batch = writeBatch(db);
+  for (const memberDoc of membersSnap.docs) {
+    batch.delete(memberDoc.ref);
+  }
+  batch.delete(tournamentRef(tournamentId));
+  await batch.commit();
+
+  if (inviteCode) {
+    try {
+      await deleteDoc(inviteCodeRef(inviteCode));
+    } catch {
+      // Código ya borrado o sin permiso puntual
+    }
+  }
+
+  const profile = await loadUserProfile();
+  const remaining = profile.tournamentIds.filter((id) => id !== tournamentId);
+  const updates: Record<string, unknown> = {
+    [FIELDS.tournamentIds]: remaining,
+  };
+  if (profile.activeTournamentId === tournamentId) {
+    updates[FIELDS.activeTournamentId] = remaining[0] ?? null;
+  }
+  await setDoc(userRef(uid), updates, { merge: true });
 }

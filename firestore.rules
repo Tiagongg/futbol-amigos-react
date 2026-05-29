@@ -1,7 +1,6 @@
 rules_version = '2';
 
-// Amiguis — cuenta obligatoria. Lectura de torneos: cualquier usuario logueado
-// (para unirse con código). Escritura de datos: solo miembros del torneo.
+// Amiguis — publicá con: firebase deploy --only firestore:rules
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,35 +14,54 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/tournaments/$(tournamentId)/members/$(request.auth.uid));
     }
 
+    function memberRole(tournamentId) {
+      return get(
+        /databases/$(database)/documents/tournaments/$(tournamentId)/members/$(request.auth.uid)
+      ).data.role;
+    }
+
+    function isAdmin(tournamentId) {
+      return isMember(tournamentId) && memberRole(tournamentId) == 'admin';
+    }
+
     function isCreator(tournamentId) {
       return isSignedIn()
         && exists(/databases/$(database)/documents/tournaments/$(tournamentId))
         && get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.createdBy == request.auth.uid;
     }
 
+    function canManage(tournamentId) {
+      return isCreator(tournamentId) || isAdmin(tournamentId);
+    }
+
     match /users/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
     match /inviteCodes/{code} {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn();
-      allow delete: if false;
+      allow delete: if isSignedIn()
+        && resource.data.tournamentId is string
+        && canManage(resource.data.tournamentId);
     }
 
     match /tournaments/{tournamentId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
         && request.resource.data.createdBy == request.auth.uid;
-      allow update: if isMember(tournamentId) || isCreator(tournamentId);
-      allow delete: if false;
+      allow update: if isMember(tournamentId) || canManage(tournamentId);
+      allow delete: if canManage(tournamentId);
 
       match /members/{memberId} {
-        allow read: if isSignedIn();
+        allow read: if canManage(tournamentId)
+          || (isSignedIn() && request.auth.uid == memberId);
         allow create: if isSignedIn() && request.auth.uid == memberId;
-        allow update: if isSignedIn() && request.auth.uid == memberId;
+        allow update: if isSignedIn()
+          && (request.auth.uid == memberId || canManage(tournamentId));
         allow delete: if isSignedIn()
-          && (request.auth.uid == memberId || isCreator(tournamentId));
+          && (request.auth.uid == memberId || canManage(tournamentId));
       }
     }
   }

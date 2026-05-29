@@ -43,6 +43,7 @@ interface AuthContextValue {
   switchTournament: (tournamentId: string) => Promise<void>;
   leaveTournament: (tournamentId: string) => Promise<void>;
   removeMemberByEmail: (tournamentId: string, email: string) => Promise<void>;
+  deleteTournament: (tournamentId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -66,6 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsBusy(true);
     setErrorMessage(null);
     try {
+      await membership.ensureLegacyTournamentOwner();
+      await membership.ensureMyMemberEmails();
       const profile = await tournamentService.loadUserProfile();
       const list = await tournamentService.listMyTournaments();
       const active = profile.activeTournamentId;
@@ -282,6 +285,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteTournament = async (tournamentId: string) => {
+    setIsBusy(true);
+    clearMessages();
+    try {
+      await tournamentService.safeTournamentAction(() =>
+        membership.deleteTournament(tournamentId),
+      );
+      setSuccessMessage('Torneo eliminado');
+      await refreshSession();
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : cloudSyncErrorMessage(e));
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
@@ -305,6 +324,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       switchTournament,
       leaveTournament,
       removeMemberByEmail,
+      deleteTournament,
     }),
     [
       session,
