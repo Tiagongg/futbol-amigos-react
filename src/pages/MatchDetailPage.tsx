@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { AppShell, ToastMessages } from '../components/AppShell';
 import { PlayerAvatar } from '../components/PlayerAvatar';
@@ -38,6 +38,11 @@ export function MatchDetailPage() {
   const [draftGoals, setDraftGoals] = useState<Record<string, number> | null>(null);
   const [swapId, setSwapId] = useState<string | null>(null);
   const [pendingGoalPlayerId, setPendingGoalPlayerId] = useState<string | null>(null);
+  const [confirmSaveRoster, setConfirmSaveRoster] = useState(false);
+
+  useEffect(() => {
+    team.clearBalancedTeams();
+  }, []);
 
   const match = matchId ? team.getSavedMatch(matchId) : undefined;
   if (!match) {
@@ -322,24 +327,61 @@ export function MatchDetailPage() {
       ) : null}
 
       {canEdit && !match.isFinalized && editRoster && canEditRoster ? (
-        <div className="button-row match-edit-actions">
-          <button type="button" className="btn btn-secondary" onClick={discardEditRoster}>
+        <div className="page-bottom-actions">
+          <button type="button" className="btn btn-secondary full-width" onClick={discardEditRoster}>
             Descartar
           </button>
-          <button type="button" className="btn btn-primary" onClick={confirmEditRoster}>
+          <button
+            type="button"
+            className="btn btn-primary full-width"
+            onClick={() => setConfirmSaveRoster(true)}
+          >
             Guardar equipos
           </button>
         </div>
       ) : null}
 
+      {confirmSaveRoster ? (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h3>¿Guardar equipos?</h3>
+            <p>
+              Se guardarán los cambios de plantilla (intercambios y suplentes) en este
+              partido. Después podrás cargar los goles.
+            </p>
+            <div className="button-row">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  confirmEditRoster();
+                  setConfirmSaveRoster(false);
+                }}
+              >
+                Sí, guardar
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setConfirmSaveRoster(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {canEdit && !match.isFinalized && !editRoster ? (
-        <button
-          type="button"
-          className="btn btn-primary full-width"
-          onClick={() => setConfirmFinalize(true)}
-        >
-          Guardar resultado (finalizar)
-        </button>
+        <div className="page-bottom-actions">
+          <button
+            type="button"
+            className="btn btn-primary full-width"
+            onClick={() => setConfirmFinalize(true)}
+          >
+            Guardar resultado (finalizar)
+          </button>
+        </div>
       ) : null}
 
       {pendingGoalPlayerId ? (

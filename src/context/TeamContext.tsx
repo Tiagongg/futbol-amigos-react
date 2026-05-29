@@ -66,6 +66,7 @@ interface TeamContextValue {
   removePlayer: (playerId: string) => void;
   balanceTeamsAction: () => boolean;
   swapBalancedPlayers: (a: string, b: string) => void;
+  clearBalancedTeams: () => void;
   saveCurrentTeamsAsMatch: () => string | null;
   getSavedMatch: (matchId: string) => SavedMatch | undefined;
   canManageMatchById: (matchId: string) => boolean;
@@ -363,13 +364,13 @@ export function TeamProvider({ children }: { children: ReactNode }) {
           savedMatches: [saved, ...data.savedMatches],
         };
         setData(next);
-        setBalancedTeams(null);
         setSuccessMessage('Partido guardado');
         dataRef.current = next;
         void persist(next, selectedPlayerIds);
         return saved.id;
       },
-      getSavedMatch: (id) => data.savedMatches.find((m) => m.id === id),
+      clearBalancedTeams: () => setBalancedTeams(null),
+      getSavedMatch: (id) => dataRef.current.savedMatches.find((m) => m.id === id),
       canManageMatchById: (matchId) => {
         const m = data.savedMatches.find((x) => x.id === matchId);
         return m ? canManageMatch(m, currentMatchUser.userId ?? '') : false;

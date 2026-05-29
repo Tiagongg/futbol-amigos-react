@@ -189,9 +189,28 @@ a {
   border: 1px solid var(--border);
 }
 
+.btn-danger {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #fff;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
 .full-width {
   width: 100%;
-  margin-top: 1rem;
+}
+
+.page-bottom-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.page-bottom-actions .btn.full-width {
+  margin-top: 0;
+  padding: 0.9rem 1.1rem;
+  border-radius: 14px;
+  font-size: 1rem;
 }
 
 .text-link {
@@ -297,20 +316,20 @@ a {
   width: 100%;
 }
 
-.match-edit-actions {
-  margin-top: 1rem;
-  display: flex;
-  gap: 0.75rem;
-}
-
-.match-edit-actions .btn {
-  flex: 1;
-}
-
 .button-row {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.modal .button-row {
+  margin-top: 1.25rem;
+}
+
+.modal .button-row .btn {
+  flex: 1 1 0;
+  min-width: 8rem;
+  justify-content: center;
 }
 
 .toast-stack {
@@ -1004,9 +1023,12 @@ article {
   padding: 1.25rem;
 }
 
-.danger-text {
+.danger-text:not(.btn) {
   color: #fca5a5;
-  margin-bottom: 1rem;
+}
+
+.danger-text.btn-sm {
+  margin-bottom: 0;
 }
 
 .modal-backdrop {

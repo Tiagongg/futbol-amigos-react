@@ -29,6 +29,7 @@ export function PlayersPage() {
       title={team.tournamentName || 'Plantilla'}
       subtitle={userEmail}
       showTournamentsLink
+      showSignOut
       actions={
         <Link className="btn btn-secondary btn-sm" to="/matches">
           Partidos ({team.savedMatches.length})

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell, ToastMessages } from '../components/AppShell';
 import { PlayerAvatar } from '../components/PlayerAvatar';
@@ -9,10 +9,18 @@ export function TeamsPage() {
   const team = useTeam();
   const navigate = useNavigate();
   const [swapId, setSwapId] = useState<string | null>(null);
+  const [confirmRebalance, setConfirmRebalance] = useState(false);
+  const [confirmSave, setConfirmSave] = useState(false);
 
   const teams = team.balancedTeams;
+
+  useEffect(() => {
+    if (!team.balancedTeams) {
+      navigate('/', { replace: true });
+    }
+  }, [team.balancedTeams, navigate]);
+
   if (!teams) {
-    navigate('/');
     return null;
   }
 
@@ -66,23 +74,6 @@ export function TeamsPage() {
       title="Equipos"
       subtitle={`Diferencia: ${teams.difference} pts`}
       backTo="/"
-      actions={
-        <>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={team.balanceTeamsAction}>
-            Rebalancear
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => {
-              const id = team.saveCurrentTeamsAsMatch();
-              if (id) navigate(`/matches/${id}`);
-            }}
-          >
-            Guardar partido
-          </button>
-        </>
-      }
     >
       <ToastMessages />
       <p className="hint swap-hint">
@@ -92,6 +83,88 @@ export function TeamsPage() {
         {renderColumn(TEAM_NAMES.OSCURA, teams.teamOscura, teams.totalOscura, 'oscura')}
         {renderColumn(TEAM_NAMES.CLARA, teams.teamClara, teams.totalClara, 'clara')}
       </div>
+      <div className="page-bottom-actions">
+        <button
+          type="button"
+          className="btn btn-secondary full-width"
+          onClick={() => setConfirmRebalance(true)}
+        >
+          Rebalancear
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary full-width"
+          onClick={() => setConfirmSave(true)}
+        >
+          Guardar partido
+        </button>
+      </div>
+
+      {confirmRebalance ? (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h3>¿Rebalancear equipos?</h3>
+            <p>
+              Se van a armar de nuevo las formaciones Oscura y Clara según el nivel de los
+              jugadores. Se pierden los intercambios manuales que hayas hecho.
+            </p>
+            <div className="button-row">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  team.balanceTeamsAction();
+                  setSwapId(null);
+                  setConfirmRebalance(false);
+                }}
+              >
+                Sí, rebalancear
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setConfirmRebalance(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {confirmSave ? (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h3>¿Guardar partido?</h3>
+            <p>
+              Se creará el partido con estos equipos y podrás cargar los goles. Los demás
+              integrantes del torneo lo verán en la nube.
+            </p>
+            <div className="button-row">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  const id = team.saveCurrentTeamsAsMatch();
+                  setConfirmSave(false);
+                  if (id) {
+                    navigate(`/matches/${id}`, { replace: true });
+                  }
+                }}
+              >
+                Sí, guardar
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setConfirmSave(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   );
 }

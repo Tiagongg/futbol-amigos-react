@@ -2,7 +2,6 @@ import { FormEvent, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { MessageBanner } from '../components/AuthLayout';
-import { SignOutButton } from '../components/SignOutButton';
 import { TournamentCard } from '../components/TournamentCard';
 
 export function TournamentsPage() {
@@ -55,7 +54,6 @@ export function TournamentsPage() {
                 Ir a la plantilla
               </Link>
             ) : null}
-            <SignOutButton />
           </div>
         </header>
 

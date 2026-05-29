@@ -11,6 +11,8 @@ interface AppShellProps {
   actions?: ReactNode;
   /** Solo en la pantalla de plantilla / jugadores */
   showTournamentsLink?: boolean;
+  /** Botón Salir: solo en la lista de jugadores */
+  showSignOut?: boolean;
 }
 
 export function AppShell({
@@ -20,6 +22,7 @@ export function AppShell({
   backTo,
   actions,
   showTournamentsLink = false,
+  showSignOut = false,
 }: AppShellProps) {
   const navigate = useNavigate();
   const team = useTeam();
@@ -59,7 +62,7 @@ export function AppShell({
               Código {team.inviteCode}
             </button>
           ) : null}
-          <SignOutButton />
+          {showSignOut ? <SignOutButton /> : null}
         </div>
       </header>
       {team.isUploading ? <div className="upload-bar" /> : null}

@@ -229,7 +229,7 @@ export function TournamentCard({
             <div className="button-row">
               <button
                 type="button"
-                className="btn btn-primary danger-text"
+                className="btn btn-danger"
                 disabled={isBusy}
                 onClick={() => {
                   void onDelete().finally(() => setConfirmDelete(false));
