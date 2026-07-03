@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { FloatingVideo } from './components/FloatingVideo';
 import { GuestRoute, SessionRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { TeamProvider } from './context/TeamContext';
@@ -36,6 +37,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <FloatingVideo />
         <Routes>
           <Route element={<GuestRoute />}>
             <Route path="/login" element={<LoginPage />} />

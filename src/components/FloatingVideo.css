@@ -1,0 +1,19 @@
+.floating-video {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 180px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+@media (max-width: 480px) {
+  .floating-video {
+    width: 130px;
+    height: 80px;
+  }
+}
