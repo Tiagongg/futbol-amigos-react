@@ -3,23 +3,30 @@ import './FloatingVideo.css';
 
 export function FloatingVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [unmuted, setUnmuted] = useState(false);
+  const [activated, setActivated] = useState(false);
 
   useEffect(() => {
-    if (unmuted) return;
+    if (activated) return;
 
-    const unmute = () => {
+    const activate = () => {
       const video = videoRef.current;
       if (video) {
         video.muted = false;
         video.play().catch(() => {});
       }
-      setUnmuted(true);
+      setActivated(true);
     };
 
-    document.addEventListener('click', unmute, { once: true });
-    return () => document.removeEventListener('click', unmute);
-  }, [unmuted]);
+    document.addEventListener('click', activate, { once: true });
+    return () => document.removeEventListener('click', activate);
+  }, [activated]);
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setActivated(true);
+  };
 
   return (
     <video
@@ -30,6 +37,8 @@ export function FloatingVideo() {
       loop
       muted
       playsInline
+      onClick={toggleMute}
+      title="Click para silenciar/activar el audio"
     />
   );
 }
