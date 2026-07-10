@@ -27,11 +27,24 @@ function winsByPlayer(matches: SavedMatch[], format: MatchFormat): Map<string, n
   return wins;
 }
 
+function matchesPlayedByPlayer(matches: SavedMatch[], format: MatchFormat): Map<string, number> {
+  const played = new Map<string, number>();
+  for (const match of matches.filter(
+    (m) => m.isFinalized && m.matchFormat === format,
+  )) {
+    for (const player of match.roster) {
+      played.set(player.playerId, (played.get(player.playerId) ?? 0) + 1);
+    }
+  }
+  return played;
+}
+
 export function standings(
   matches: SavedMatch[],
   format: MatchFormat,
 ): GoalScorerStanding[] {
   const wins = winsByPlayer(matches, format);
+  const played = matchesPlayedByPlayer(matches, format);
   const accumulator = new Map<
     string,
     {
@@ -39,7 +52,6 @@ export function standings(
       name: string;
       imageUri?: string | null;
       totalGoals: number;
-      matchesPlayed: number;
     }
   >();
 
@@ -54,12 +66,10 @@ export function standings(
         name: player.name,
         imageUri: player.imageUri,
         totalGoals: 0,
-        matchesPlayed: 0,
       };
       entry.name = player.name;
       entry.imageUri = player.imageUri ?? entry.imageUri;
       entry.totalGoals += g;
-      entry.matchesPlayed += 1;
       accumulator.set(player.playerId, entry);
     }
   }
@@ -70,7 +80,7 @@ export function standings(
       name: e.name,
       imageUri: e.imageUri,
       totalGoals: e.totalGoals,
-      matchesPlayed: e.matchesPlayed,
+      matchesPlayed: played.get(e.playerId) ?? 0,
       matchesWon: wins.get(e.playerId) ?? 0,
     }))
     .sort(

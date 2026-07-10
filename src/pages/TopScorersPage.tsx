@@ -36,7 +36,8 @@ export function TopScorersPage() {
                 <div className="scorer-info">
                   <strong className="scorer-name">{s.name}</strong>
                   <span className="meta scorer-stats">
-                    {s.totalGoals} goles · {s.matchesWon}{' '}
+                    {s.totalGoals} goles · {s.matchesPlayed}{' '}
+                    {s.matchesPlayed === 1 ? 'partido' : 'partidos'} · {s.matchesWon}{' '}
                     {s.matchesWon === 1 ? 'victoria' : 'victorias'}
                   </span>
                 </div>
