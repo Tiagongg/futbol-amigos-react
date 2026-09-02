@@ -1,0 +1,131 @@
+.donation-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.donation-card {
+  position: relative;
+  background: var(--surface, #111827);
+  border: 1px solid var(--border, #1f2937);
+  border-radius: 20px;
+  padding: 2rem 1.5rem 1.5rem;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+}
+
+.donation-card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+}
+
+.donation-card p {
+  margin: 0 0 1.25rem;
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.donation-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.donation-cta {
+  display: block;
+  background: linear-gradient(135deg, var(--accent, #3b82f6), var(--accent-dark, #1d4ed8));
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.donation-dismiss {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.donation-card-insist {
+  max-width: 480px;
+  padding: 3rem 2rem 2.5rem;
+  border: 2px solid var(--accent, #3b82f6);
+  box-shadow: 0 0 40px rgba(59, 130, 246, 0.5);
+}
+
+.donation-insist-title {
+  margin: 0 0 1.5rem;
+  font-size: 2.25rem;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+}
+
+.donation-cta-big {
+  font-size: 1.3rem;
+  padding: 1.1rem 1.5rem;
+  margin-bottom: 0;
+}
+
+.donation-overlay-mega {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #1d2b53, #05070d 80%);
+  gap: 2rem;
+  text-align: center;
+  animation: donation-mega-flash 1s ease-in-out infinite alternate;
+}
+
+.donation-mega-title {
+  margin: 0;
+  font-size: clamp(2.5rem, 9vw, 6rem);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 0 30px var(--accent, #3b82f6);
+}
+
+.donation-cta-mega {
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  padding: 1.5rem 3rem;
+  margin: 0;
+}
+
+.donation-close-mega {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  font-size: 2.5rem;
+  color: #fff;
+}
+
+@keyframes donation-mega-flash {
+  from {
+    background-color: #05070d;
+  }
+  to {
+    background-color: #1d2b53;
+  }
+}

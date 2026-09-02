@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { DonationBanner } from './components/DonationBanner';
 import { FloatingVideo } from './components/FloatingVideo';
 import { GuestRoute, SessionRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
@@ -37,6 +38,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <DonationBanner />
         <FloatingVideo />
         <Routes>
           <Route element={<GuestRoute />}>
