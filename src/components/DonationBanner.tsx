@@ -73,7 +73,7 @@ export function DonationBanner() {
           type="button"
           className="donation-close"
           aria-label="Cerrar"
-          onClick={() => setStage('closed')}
+          onClick={() => setStage('insist')}
         >
           ×
         </button>
