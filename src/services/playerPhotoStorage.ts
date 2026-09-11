@@ -1,8 +1,9 @@
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import type { Player, SavedMatch } from '../types/models';
-import { storage } from '../firebase/config';
 
 const LOCAL_PREFIX = 'amiguis-local-photo:';
+
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 export function isCloudUrl(uri: string): boolean {
   return uri.startsWith('https://') || uri.startsWith('http://');
@@ -36,10 +37,25 @@ async function uploadPlayerPhoto(
   playerId: string,
   blob: Blob,
 ): Promise<string> {
-  const path = `tournaments/${tournamentId}/players/${playerId}.jpg`;
-  const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
-  return getDownloadURL(storageRef);
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+    throw new Error(
+      'Faltan variables de Cloudinary en .env.local: VITE_CLOUDINARY_CLOUD_NAME, VITE_CLOUDINARY_UPLOAD_PRESET',
+    );
+  }
+  const formData = new FormData();
+  formData.append('file', blob, `${playerId}.jpg`);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  formData.append('context', `tournamentId=${tournamentId}|playerId=${playerId}`);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    { method: 'POST', body: formData },
+  );
+  if (!res.ok) {
+    throw new Error(`Cloudinary upload failed: ${res.status}`);
+  }
+  const data = (await res.json()) as { secure_url: string };
+  return data.secure_url;
 }
 
 export async function uploadPlayerPhotoIfNeeded(
@@ -68,7 +84,7 @@ export async function uploadAllPlayerPhotos(
         onPhotoError?.(e);
         if (!warning) {
           warning =
-            'Algunas fotos no se subieron. Verificá Firebase Storage y las reglas.';
+            'Algunas fotos no se subieron. Verificá la configuración de Cloudinary.';
         }
         return player;
       }
